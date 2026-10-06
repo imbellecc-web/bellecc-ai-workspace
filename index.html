@@ -11,9 +11,190 @@ function readingBooks(){let arr=data.books.filter(b=>!query||[b.title,b.author,b
 function bookList(arr){if(!arr.length)return '<div class="card empty">目前沒有符合的書籍</div>';return `<div class="list">${arr.map(b=>`<div class="item"><div class="book" onclick="readingGo('detail',${b.id})" style="cursor:pointer"><div class="cover">📖</div><div><strong>${esc(b.title)}</strong><div class="muted">${esc(b.author)} · ${esc(b.category)} · ${esc(b.status)}</div><div class="muted">進度 ${b.progress||0}% ${b.rating?`· 評分 ${b.rating}/5`:''}</div><div class="chips">${(b.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div></div></div><div class="actions"><button class="btn ghost" onclick="readingGo('detail',${b.id})">查看</button><button class="btn ghost" onclick="toggleBookFav(${b.id})">${b.fav?'★':'☆'}</button><button class="btn ghost" onclick="openBook(${b.id})">編輯</button><button class="btn ghost" onclick="delBook(${b.id})">刪除</button></div></div>`).join('')}</div>`}
 function bookDetail(id){let b=data.books.find(x=>x.id===id);if(!b){return readingBooks()}let notes=data.records.filter(x=>x.type==='閱讀筆記'&&(x.bookId===id||x.book===b.title));return header('📖 '+esc(b.title),`${esc(b.author)} · ${esc(b.category)}`)+readingNav()+`<div class="toolbar"><button class="btn" onclick="openRecord('閱讀筆記',null,${b.id},'${esc(b.title).replace(/'/g,"&#039;")}')">＋ 新增閱讀筆記</button><button class="btn secondary" onclick="openQuoteForBook(${b.id})">＋ 新增金句</button><button class="btn ghost" onclick="openBook(${b.id})">編輯書籍</button><button class="btn ghost" onclick="toggleBookFav(${b.id})">${b.fav?'★ 已收藏':'☆ 收藏書籍'}</button></div><div class="card"><div class="book"><div class="cover" style="width:70px;height:92px">📖</div><div><h2 style="margin:0 0 6px">${esc(b.title)}</h2><div class="muted">作者：${esc(b.author)}</div><div class="muted">狀態：${esc(b.status)} · 進度 ${b.progress||0}% · ${b.rating?`評分 ${b.rating}/5`:'尚未評分'}</div><div class="chips">${(b.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div></div></div><p>${esc(b.notes||'尚未寫下書籍摘要。')}</p></div><div class="section-title"><h2>閱讀筆記</h2></div>${recordList(notes)}<div class="section-title"><h2>本書金句</h2></div>${quoteList(data.quotes.filter(q=>q.book===b.title),true)}`}
 function readingAI(){return header('✨ AI 閱讀整理','第一版使用示範 AI 結果，未連接 API。')+readingNav()+`<div class="card"><div class="muted">書籍內容／我的閱讀筆記</div><textarea class="textarea" id="aiText" placeholder="貼上書籍內容、章節摘要或你的閱讀筆記…"></textarea><div class="toolbar"><button class="btn" onclick="aiMockFull()">✨ AI 幫我整理</button></div><div id="aiResult"></div></div>`}
-function aiMockFull(){let t=document.getElementById('aiText').value.trim()||'這是一段示範閱讀內容。';let r={core:'從內容中提取最值得保留的核心觀念，先理解原則，再思考如何應用。',author:'作者希望讀者把觀念轉成判斷與行動，而不是只停留在閱讀。',quote:'先建立清晰的理解，再把理解變成可以重複執行的行動。',understand:'把「知道」變成「會用」，並用自己的經驗重新解釋。',action:'寫下 1 個今天可以執行的行動，一週後回顧。',invest:'檢查這個觀念是否能改善選股、風險管理、資產配置或投資紀律。',career:'思考它是否能改善決策、學習方式、工作流程與職涯選擇。',media:'轉化成 IG／Threads：痛點＋觀念＋實例＋行動建議。',question:'如果我真的相信這個觀念，我明天會做出什麼不同的選擇？'};window.aiDraft={input:t,result:r};document.getElementById('aiResult').innerHTML=`<div class="card" style="margin-top:16px;background:#f8f0e9"><h3>AI 整理結果</h3>${[['📌 核心觀念',r.core],['💡 作者主要觀點',r.author],['⭐ 重要金句',r.quote],['🧠 我的理解',r.understand],['🚀 可以實踐',r.action],['📈 與投資的關聯',r.invest],['💼 與職涯的關聯',r.career],['📱 與自媒體的關聯',r.media],['🤔 值得思考的問題',r.question]].map(([h,v])=>`<div class="item" style="margin:9px 0;display:block"><strong>${h}</strong><div style="margin-top:6px;line-height:1.7">${esc(v)}</div></div>`).join('')}<div class="actions"><button class="btn" onclick="saveAIDraftNote()">💾 儲存成閱讀筆記</button><button class="btn secondary" onclick="saveAIDraftQuote()">⭐ 收藏金句</button><button class="btn ghost" onclick="editAIDraft()">✏️ 編輯</button><button class="btn ghost" onclick="document.getElementById('aiResult').innerHTML=''">刪除</button></div></div>`}
-function saveAIDraftNote(){let d=window.aiDraft;if(!d)return;data.records.unshift({id:Date.now(),type:'閱讀筆記',title:'AI 閱讀整理',text:Object.values(d.result).join('\n\n'),tags:['AI整理','閱讀'],fav:false,created:Date.now()});save();render()}
-function saveAIDraftQuote(){let d=window.aiDraft;if(!d)return;data.quotes.unshift({id:Date.now(),text:d.result.quote,book:'未指定書籍',author:'',page:'',meaning:d.result.understand,tags:['AI整理','閱讀'],fav:true,created:Date.now()});save();render()}
+async function aiMockFull(){
+  const text = document.getElementById('aiText').value.trim();
+  const result = document.getElementById('aiResult');
+
+  if (!text) {
+    result.innerHTML = `
+      <div class="card" style="margin-top:16px">
+        請先貼上書籍內容或閱讀筆記。
+      </div>
+    `;
+    return;
+  }
+
+  result.innerHTML = `
+    <div class="card" style="margin-top:16px">
+      <div class="muted">✨ AI 正在整理中……</div>
+    </div>
+  `;
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `你是我的私人閱讀助理。
+
+請分析以下書籍內容或閱讀筆記。
+
+【內容開始】
+${text}
+【內容結束】
+
+請用繁體中文，按照以下 9 個部分整理：
+
+📌 核心觀念
+請整理 3～5 個真正重要的核心觀念。
+
+💡 作者主要觀點
+說明作者真正想傳達的主要思想。
+
+⭐ 重要金句
+從內容中找出值得保留的關鍵句。
+如果原文沒有明確金句，不要自行假造，請整理成「值得記住的一句話」。
+
+🧠 我的理解
+用白話說明這些觀念可以怎麼理解。
+
+🚀 可以實踐
+列出具體、可以真正執行的行動。
+
+📈 與投資的關聯
+分析這些觀念如何應用在投資、選股、風險管理、資產配置或投資心理。
+
+💼 與職涯的關聯
+分析如何應用在職涯選擇、學習、工作效率、決策或轉職。
+
+📱 與自媒體的關聯
+分析哪些觀念可以轉化成 IG、Threads、Reels 或其他內容。
+
+🤔 值得思考的問題
+提出 3 個可以幫助我深入思考的問題。
+
+請避免空泛的雞湯。
+請盡量根據我提供的內容回答。
+請用清楚的標題與條列方式整理。`
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'AI 請求失敗');
+    }
+
+    const reply = data.reply || 'AI 沒有回傳內容。';
+
+    window.aiDraft = {
+      input: text,
+      result: {
+        core: reply
+      }
+    };
+
+    result.innerHTML = `
+      <div class="card" style="margin-top:16px;background:#f8f0e9">
+        <h3>✨ AI 閱讀整理結果</h3>
+
+        <div style="
+          white-space:pre-wrap;
+          line-height:1.9;
+          margin-top:14px;
+        ">${esc(reply)}</div>
+
+        <div class="actions" style="margin-top:20px">
+          <button
+            class="btn"
+            onclick="saveAIResultAsNote()">
+            💾 儲存成閱讀筆記
+          </button>
+
+          <button
+            class="btn secondary"
+            onclick="saveAIResultAsQuote()">
+            ⭐ 收藏 AI 金句
+          </button>
+
+          <button
+            class="btn ghost"
+            onclick="document.getElementById('aiResult').innerHTML=''">
+            刪除
+          </button>
+        </div>
+      </div>
+    `;
+
+  } catch (error) {
+
+    result.innerHTML = `
+      <div
+        class="card"
+        style="
+          margin-top:16px;
+          background:#fff0ed;
+        "
+      >
+        <strong>⚠️ AI 暫時無法使用</strong>
+
+        <div style="margin-top:8px">
+          ${esc(error.message)}
+        </div>
+      </div>
+    `;
+  }
+}
+
+
+function saveAIResultAsNote(){
+
+  if (!window.aiDraft) return;
+
+  data.records.unshift({
+    id: Date.now(),
+    type: '閱讀筆記',
+    title: 'AI 閱讀整理',
+    text: window.aiDraft.result.core,
+    tags: ['AI整理','閱讀'],
+    fav: false,
+    created: Date.now()
+  });
+
+  save();
+
+  alert('已儲存成閱讀筆記！');
+
+  render();
+}
+
+
+function saveAIResultAsQuote(){
+
+  if (!window.aiDraft) return;
+
+  const text = window.aiDraft.result.core;
+
+  data.quotes.unshift({
+    id: Date.now(),
+    text: text.slice(0, 300),
+    book: 'AI 閱讀整理',
+    author: '',
+    page: '',
+    meaning: '',
+    tags: ['AI整理','閱讀'],
+    fav: true,
+    created: Date.now()
+  });
+
+  save();
+
+  alert('已收藏 AI 閱讀內容！');
+
+  render();
+}
 function editAIDraft(){document.getElementById('aiText').focus()}
 function quoteList(arr,full=false){if(!arr.length)return '<div class="card empty">目前沒有金句</div>';return `<div class="list">${arr.map(q=>`<div class="item"><div class="left"><strong>“${esc(q.text)}”</strong><div class="muted">${esc(q.book)} · ${esc(q.author)} ${q.page?'· '+esc(q.page):''}</div><div class="muted">${esc(q.meaning||'')}</div><div class="chips">${(q.tags||[]).map(t=>`<span class="chip">#${esc(t)}</span>`).join('')}</div><div class="muted">${q.created?new Date(q.created).toLocaleDateString('zh-TW'):''}</div></div><div class="actions"><button class="btn ghost" onclick="toggleQuote(${q.id})">${q.fav?'★':'☆'}</button>${full?`<button class="btn ghost" onclick="openQuote(${q.id})">編輯</button><button class="btn ghost" onclick="delQuote(${q.id})">刪除</button>`:''}</div></div>`).join('')}</div>`}
 function readingQuotes(){let arr=data.quotes.filter(q=>!query||[q.text,q.book,q.author,q.page,q.meaning,...(q.tags||[])].join(' ').toLowerCase().includes(query.toLowerCase()));return header('⭐ 金句收藏','把真正值得反覆閱讀的句子，留在自己的知識庫。')+readingNav()+`<div class="toolbar"><button class="btn" onclick="openQuote()">＋ 新增金句</button><input class="input" placeholder="搜尋金句／書名／作者／標籤" value="${esc(query)}" oninput="query=this.value;render()"></div>${quoteList(arr,true)}`}

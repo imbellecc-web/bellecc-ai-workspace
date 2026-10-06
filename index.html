@@ -67,24 +67,20 @@ ${text}
 請盡量根據我提供的內容回答。
 請用清楚的標題與條列方式整理。`;
 
-  // 儲存這次 AI 請求內容
   window.aiDraft = {
     input: text,
-    prompt: prompt,
-    result: {
-      core: ''
-    }
+    prompt: prompt
   };
 
-  // 顯示免費使用方式
   result.innerHTML = `
     <div class="card" style="margin-top:16px;background:#f8f0e9">
 
       <h3>✨ 免費 AI 閱讀整理</h3>
 
       <p style="line-height:1.8">
-        不需要 API、不需要購買 credits。<br>
-        點下面按鈕後，會複製完整 AI 指令。
+        第 1 步：複製 AI 指令<br>
+        第 2 步：開啟 ChatGPT 並貼上<br>
+        第 3 步：把 ChatGPT 的整理結果複製回來
       </p>
 
       <div class="actions" style="margin-top:16px">
@@ -103,8 +99,45 @@ ${text}
 
       </div>
 
-      <div class="muted" style="margin-top:14px">
-        使用方式：複製指令 → 開啟 ChatGPT → 貼上 → 送出。
+      <div style="margin-top:20px">
+
+        <div class="muted" style="margin-bottom:8px">
+          📥 把 ChatGPT 整理好的結果貼在這裡
+        </div>
+
+        <textarea
+          class="textarea"
+          id="aiReturnedText"
+          placeholder="例如：
+
+📌 核心觀念
+1. ...
+2. ...
+
+💡 作者主要觀點
+...
+
+🚀 可以實踐
+...
+
+把 ChatGPT 的完整回答貼到這裡即可。"
+          style="min-height:260px"
+        ></textarea>
+
+      </div>
+
+      <div class="toolbar" style="margin-top:14px">
+
+        <button
+          class="btn"
+          onclick="saveReturnedAIResult()">
+          💾 儲存 AI 閱讀整理
+        </button>
+
+      </div>
+
+      <div class="muted" style="margin-top:12px">
+        儲存後，可以在這本書的閱讀紀錄中查看。
       </div>
 
     </div>
@@ -112,6 +145,37 @@ ${text}
 }
 
 
+function saveReturnedAIResult(){
+
+  const text = document.getElementById('aiReturnedText')?.value.trim();
+
+  if (!text) {
+    alert('請先貼上 ChatGPT 的整理結果。');
+    return;
+  }
+
+  const input = window.aiDraft?.input || '';
+
+  const records = JSON.parse(
+    localStorage.getItem('readingRecords') || '[]'
+  );
+
+  records.push({
+    id: Date.now(),
+    type: 'AI 閱讀整理',
+    content: text,
+    source: input,
+    createdAt: new Date().toLocaleString()
+  });
+
+  localStorage.setItem(
+    'readingRecords',
+    JSON.stringify(records)
+  );
+
+  alert('✨ AI 閱讀整理已儲存！');
+
+}
 function copyReadingPrompt(){
 
   if (!window.aiDraft || !window.aiDraft.prompt) return;
